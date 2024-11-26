@@ -1,0 +1,6 @@
+opencv-python
+Flask
+flask-cors
+flask-socketio
+cvzone
+pynput

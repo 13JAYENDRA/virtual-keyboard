@@ -1,0 +1,98 @@
+import cv2
+import mediapipe as mp
+import pygame
+from time import sleep
+from cvzone.HandTrackingModule import HandDetector
+from pynput.keyboard import Key,Controller
+
+pygame.mixer.init()
+cap = cv2.VideoCapture(0)
+cap.set(3, 1200)  # Width
+cap.set(4, 800)  # Height
+detector = HandDetector(detectionCon=0.8)
+hover_sound = pygame.mixer.Sound("KBSOUND.wav")
+keyboard = Controller()
+
+class Keys():
+    def __init__(self,pos,text,size=[80,80]):
+        self.pos = pos
+        self.text = text
+        self.size = size
+    
+    def draw(self,img):
+        x,y = self.pos
+        w,h = self.size
+        cv2.rectangle(img,self.pos,(x+w,y+h),(204, 0, 0),cv2.FILLED)
+        cv2.putText(img,self.text,(self.pos[0]+20,
+                    self.pos[1]+60),cv2.FONT_HERSHEY_PLAIN,4,(255,255,255),2)
+        return img
+    
+keyboard_layout = [
+    ['1','2','3','4','5','6','7','8','9','0'],
+    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ','],
+    ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '.', '?', ' ']
+]
+output_txt = ""
+key_lst=[]
+for x,char in enumerate(keyboard_layout[0]):
+    key_lst.append(Keys((80 * x + x * 10 + 200, 50), char))
+for x,char in enumerate(keyboard_layout[1]):
+    key_lst.append(Keys((80 * x + x * 10 + 200, 140), char))
+for x,char in enumerate(keyboard_layout[2]):
+    key_lst.append(Keys((80 * x + x * 10 + 200, 230), char))
+for x,char in enumerate(keyboard_layout[3]):
+    key_lst.append(Keys((80 * x + x * 10 + 200, 320), char))
+
+
+while True:
+    success, img = cap.read()
+    img = cv2.flip(img, 1)
+    hands,img = detector.findHands(img,flipType=False)
+    
+    for i in key_lst:
+        i.draw(img)
+    cv2.rectangle(img, (1010,410), (1090,500), ((234, 0, 0)), cv2.FILLED)
+    cv2.putText(img,"<-",(1015,470),cv2.FONT_HERSHEY_PLAIN,4,(255,255,255),2)
+    if hands:
+        hand = hands[0]
+        lmList = hand["lmList"]
+        bbox = hand["bbox"]
+        length, _, _ = detector.findDistance(lmList[8][0:2], lmList[4][0:2], img)
+
+        for key in key_lst:
+            x, y = key.pos
+            w, h = key.size
+            if x < lmList[8][0] < x + w and y< lmList[8][1] < y+h:
+                cv2.rectangle(img, key.pos, (x + w, y + h), (255, 153, 51), cv2.FILLED)  # Blue color
+                cv2.putText(img,key.text,(key.pos[0]+10,
+                    key.pos[1]+60),cv2.FONT_HERSHEY_PLAIN,5,(255,255,255),2)
+                length, _, _ = detector.findDistance(lmList[8][0:2], lmList[4][0:2], img)
+                
+                
+                if length<40:
+                    keyboard.press(key.text)
+                    cv2.rectangle(img, key.pos, (x + w, y + h), (0, 153, 0), cv2.FILLED)
+                    cv2.putText(img,key.text,(key.pos[0]+10,
+                    key.pos[1]+40),cv2.FONT_HERSHEY_PLAIN,5,(255,255,255),2)
+                    output_txt += key.text
+                    hover_sound.play()
+                    print(length)
+                    sleep(0.25)
+        
+        if 1010 < lmList[8][0] < 1090 and 410< lmList[8][1] < 500:
+            cv2.rectangle(img, (1010,410), (1090,500), (255, 153, 51), cv2.FILLED)
+            cv2.putText(img,"<-",(1015,470),cv2.FONT_HERSHEY_PLAIN,4,(255,255,255),2)
+
+            if length<40:
+              keyboard.press(Key.backspace)
+              if output_txt != "":
+                output_txt = output_txt[:-1]
+                hover_sound.play()
+                sleep(0.2)
+    
+    cv2.rectangle(img, (200,410), (1000,500), ((234, 0, 0)), cv2.FILLED)  # Blue colo
+    cv2.putText(img,output_txt,(210,470),cv2.FONT_HERSHEY_PLAIN,4,(255,255,255),2)
+
+    cv2.imshow("Hand Tracking", img)
+    cv2.waitKey(1)
