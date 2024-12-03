@@ -1,10 +1,10 @@
 import cv2
 from time import sleep
 from cvzone.HandTrackingModule import HandDetector
-from pynput.keyboard import Key, Controller
 from flask import Flask, Response
 import threading
 import os
+
 print("Current working directory:", os.getcwd())
 
 # Initialize Flask
@@ -16,9 +16,8 @@ cap.set(3, 1200)  # Width
 cap.set(4, 800)  # Height
 
 detector = HandDetector(detectionCon=0.8)
-keyboard = Controller()
 
-# Keyboard layout and keys
+# Keyboard layout and keys (without pynput integration)
 class Keys:
     def __init__(self, pos, text, size=[80, 80]):
         self.pos = pos
@@ -76,9 +75,7 @@ def capture_frames():
                     cv2.putText(img, key.text, (key.pos[0] + 10, key.pos[1] + 60), cv2.FONT_HERSHEY_PLAIN, 5, (255, 255, 255), 2)
 
                     if length < 40:
-                        keyboard.press(key.text)
-                        cv2.rectangle(img, key.pos, (x + w, y + h), (0, 153, 0), cv2.FILLED)  # Pressed color
-                        cv2.putText(img, key.text, (key.pos[0] + 10, key.pos[1] + 40), cv2.FONT_HERSHEY_PLAIN, 5, (255, 255, 255), 2)
+                        # Removed the keyboard press functionality as it's not needed on EC2
                         output_txt += key.text
                         sleep(0.25)
 
@@ -88,7 +85,6 @@ def capture_frames():
                 cv2.putText(img, "<-", (1015, 470), cv2.FONT_HERSHEY_PLAIN, 4, (255, 255, 255), 2)
 
                 if length < 40:
-                    keyboard.press(Key.backspace)
                     if output_txt:
                         output_txt = output_txt[:-1]
                     sleep(0.2)
@@ -128,12 +124,7 @@ def create_text_file():
     file_path = "EaEcEhE_EEstWeWp.txt"  # File name
     with open(file_path, "w") as file:
         file.write("Hello! This is a custom text file.\n")
-        file.write("Here is another line of text.")
-    print(f"File '{file_path}' created successfully.")
 
 if __name__ == "__main__":
-    # First, create the text file
-    create_text_file()
-
-    # Run Flask
     app.run(host="0.0.0.0", port=5000)
+
